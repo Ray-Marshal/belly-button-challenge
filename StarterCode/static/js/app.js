@@ -1,54 +1,95 @@
-const url = "https://static.bc-edx.com/data/dl-1-2/m14/lms/starter/samples.json";
+const url =
+  "https://static.bc-edx.com/data/dl-1-2/m14/lms/starter/samples.json";
 
-const dataPromise = d3.json(url).then(function(data) {
-
-let otuSamples = data.samples
-let sampleNames = data.names
-let sampleInfo = data.metadata
-let sample_values_array = []
-let otu_ids_array = []
-let otu_labels_array = []
-
+let otuSamples = [];
+let sampleNames = [];
+let sampleInfo = [];
+let sample_values_array = [];
+let otu_ids_array = [];
+let otu_labels_array = [];
 const dropdownMenu = d3.select("#selDataset");
-dropdownMenu.selectAll("option")
+
+let traceBar = [
+  {
+    x: [],
+    text: [],
+    type: "bar",
+    orientation: "h",
+  },
+];
+let layoutBar = {
+  xaxis: {
+    type: "category",
+  },
+};
+Plotly.newPlot("bar", traceBar, layoutBar);
+
+let traceBubble = [
+  {
+    x: [],
+    y: [],
+    text: [],
+    mode: "markers",
+    marker: {
+      color: [],
+      size: [],
+    },
+  },
+];
+Plotly.newPlot("bubble", traceBubble);
+
+d3.json(url).then(function (data) {
+  otuSamples = data.samples;
+  sampleNames = data.names;
+  sampleInfo = data.metadata;
+  init();
+});
+
+function UpdateDemoInfo(id) {
+    let meta = sampleInfo.find((s) => {
+        return s.id == id;
+        });
+        console.log(meta,sampleInfo)
+    d3.select("#sample-metadata")
+    .html(`
+    id: ${meta.id}<br> 
+    ethnicity: ${meta.ethnicity}<br>`)
+}
+
+
+function updateCharts(id) {
+  let index = otuSamples.findIndex((s) => {
+    return s.id === id;
+  });
+  traceBar[0].x = otuSamples[index].sample_values.slice(0, 10);
+  traceBar[0].text = otuSamples[index].otu_labels.slice(0, 10);
+  console.log(traceBar);
+  Plotly.react("bar", traceBar);
+  traceBubble[0].x = otuSamples[index].otu_ids;
+  traceBubble[0].y = otuSamples[index].sample_values;
+  traceBubble[0].text = otuSamples[index].otu_labels;
+  traceBubble[0].marker.color = otuSamples[index].otu_ids;
+  traceBubble[0].marker.size = otuSamples[index].sample_values;
+  console.log(traceBubble);
+  Plotly.react("bubble", traceBubble);
+}
+
+function init() {
+  updateCharts("940");
+  UpdateDemoInfo("940")
+  dropdownMenu
+    .selectAll("option")
     .data(sampleNames)
     .enter()
     .append("option")
-    .text(d => d);
-
-function init() {
-    trace1 = [{
-        x: otuSamples[0].sample_values.slice(0, 10),
-        y: otuSamples[0].otu_ids.slice(0, 10),
-        text: otuSamples[0].otu_labels.slice(0, 10), 
-        type: "bar",
-        orientation: "h", 
-        yaxis: 'category'
-    }];
-        
-Plotly.newPlot("bar", trace1);
-};
+    .text((d) => d);
+}
 
 dropdownMenu.on("change", optionChanged);
 
 function optionChanged() {
-    let selectedValue = dropdownMenu.property("value");
-    for (const key in otuSamples) {
-        if (otuSamples[key].id === selectedValue) {
-            sample_values_array = Object.values(otuSamples[key].sample_values)
-            otu_ids_array = Object.values(otuSamples[key].otu_ids)
-            otu_labels_array = Object.values(otuSamples[key].otu_labels)
-        }
-    }
-    
-    let x = sample_values_array.slice(0, 10);
-    let y = otu_ids_array.slice(0, 10);
-    let text = otu_labels_array.slice(0, 10)
-
-    Plotly.restyle("bar", "x", [x]);
-    Plotly.restyle("bar", "y", [y]);
-    Plotly.restyle("bar", "text", [text]);
+  let selectedValue = dropdownMenu.property("value");
+  updateCharts(selectedValue);
+  UpdateDemoInfo(selectedValue);
 }
 
-init()
-});
